@@ -1,4 +1,4 @@
-package com.aladdin.ingest;
+package com.aladddin.ctwatcher;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
