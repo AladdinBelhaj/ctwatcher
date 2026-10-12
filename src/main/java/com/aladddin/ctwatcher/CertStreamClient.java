@@ -27,26 +27,25 @@ public class CertStreamClient {
 
     @EventListener(ApplicationReadyEvent.class)
     public void connect() {
+        log.info("Connecting to {}", url);
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
                 .buildAsync(URI.create(url), new CertStreamListener())
-                .join();
-        log.info("Connecting to {}", url);
-    }
+                .join();}
 
     private static class CertStreamListener implements WebSocket.Listener {
 
         @Override
         public void onOpen(WebSocket webSocket) {
             log.info("Successfully connected to CertStream!");
+            webSocket.request(1);
             WebSocket.Listener.super.onOpen(webSocket);
         }
 
         @Override
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-            // Every single new certificate arrives right here!
             log.info("Received certificate payload: {}", data);
-
+            webSocket.request(1);
             return WebSocket.Listener.super.onText(webSocket, data, last);
         }
 
@@ -54,6 +53,14 @@ public class CertStreamClient {
         public void onError(WebSocket webSocket, Throwable error) {
             log.error("A WebSocket error occurred", error);
             WebSocket.Listener.super.onError(webSocket, error);
+        }
+
+        @Override
+        public CompletionStage<?> onClose(WebSocket webSocket,
+                                          int statusCode,
+                                          String reason) {
+            log.info("Closed: {} {}", statusCode, reason);
+            return null;
         }
     }
 }
