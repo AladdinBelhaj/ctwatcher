@@ -40,6 +40,7 @@ public class CertStreamClient {
 
     private static class CertStreamListener implements WebSocket.Listener {
         private final ObjectMapper mapper;
+        private final StringBuilder buffer = new StringBuilder();
 
         private CertStreamListener(ObjectMapper mapper) {
             this.mapper = mapper;
@@ -55,11 +56,15 @@ public class CertStreamClient {
         @Override
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
             JsonNode root = mapper.readTree(data.toString());
-            for (JsonNode d : root.path("data")){
-                log.info("Domain: {}", d.asString());
+            buffer.append(data);
+            if (last) {
+                for (JsonNode d : root.path("data")){
+                    log.info("Domain: {}", buffer.toString());
+                }
+                buffer.setLength(0);
             }
             webSocket.request(1);
-            return WebSocket.Listener.super.onText(webSocket, data, last);
+            return null;
         }
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
