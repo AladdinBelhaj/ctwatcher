@@ -7,6 +7,7 @@ import org.springframework.context.event.EventListener;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
@@ -53,7 +54,10 @@ public class CertStreamClient {
 
         @Override
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-            log.info("Received certificate payload: {}", data);
+            JsonNode root = mapper.readTree(data.toString());
+            for (JsonNode d : root.path("data")){
+                log.info("Domain: {}", d.asString());
+            }
             webSocket.request(1);
             return WebSocket.Listener.super.onText(webSocket, data, last);
         }
