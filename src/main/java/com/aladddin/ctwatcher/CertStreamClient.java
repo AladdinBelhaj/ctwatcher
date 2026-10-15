@@ -55,11 +55,11 @@ public class CertStreamClient {
 
         @Override
         public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-            JsonNode root = mapper.readTree(data.toString());
             buffer.append(data);
             if (last) {
+                JsonNode root = mapper.readTree(buffer.toString());
                 for (JsonNode d : root.path("data")){
-                    log.info("Domain: {}", buffer.toString());
+                    log.info("Domain: {}", d.toString());
                 }
                 buffer.setLength(0);
             }
