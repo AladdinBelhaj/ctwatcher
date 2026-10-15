@@ -48,7 +48,6 @@ public class CertStreamClient {
             webSocket.request(1);
             return WebSocket.Listener.super.onText(webSocket, data, last);
         }
-
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
             log.error("A WebSocket error occurred", error);
@@ -56,11 +55,9 @@ public class CertStreamClient {
         }
 
         @Override
-        public CompletionStage<?> onClose(WebSocket webSocket,
-                                          int statusCode,
-                                          String reason) {
+        public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
             log.info("Closed: {} {}", statusCode, reason);
-            return null;
+            return WebSocket.Listener.super.onClose(webSocket, statusCode, reason);
         }
     }
 }
