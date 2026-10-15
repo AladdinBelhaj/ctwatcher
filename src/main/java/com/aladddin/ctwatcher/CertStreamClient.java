@@ -7,6 +7,7 @@ import org.springframework.context.event.EventListener;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,8 +22,11 @@ public class CertStreamClient {
 
     private final String url;
 
-    public CertStreamClient(@Value("${certstream.url}") String url) {
+    private final ObjectMapper mapper;
+
+    public CertStreamClient(@Value("${certstream.url}") String url, ObjectMapper mapper) {
         this.url = url;
+        this.mapper = mapper;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -30,10 +34,15 @@ public class CertStreamClient {
         log.info("Connecting to {}", url);
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
-                .buildAsync(URI.create(url), new CertStreamListener())
+                .buildAsync(URI.create(url), new CertStreamListener(mapper))
                 .join();}
 
     private static class CertStreamListener implements WebSocket.Listener {
+        private final ObjectMapper mapper;
+
+        private CertStreamListener(ObjectMapper mapper) {
+            this.mapper = mapper;
+        }
 
         @Override
         public void onOpen(WebSocket webSocket) {
