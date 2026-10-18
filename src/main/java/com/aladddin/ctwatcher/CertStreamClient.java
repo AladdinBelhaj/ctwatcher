@@ -16,6 +16,9 @@ import java.net.http.WebSocket;
 import java.util.concurrent.CompletionStage;
 
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 @Component
 public class CertStreamClient {
 
@@ -35,8 +38,18 @@ public class CertStreamClient {
         log.info("Connecting to {}", url);
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
-                .buildAsync(URI.create(url), new CertStreamListener(mapper))
-                .join();}
+                .buildAsync(URI.create(url), new CertStreamListener(mapper, this::scheduleReconnect))
+                .exceptionally(ex -> {
+                    log.error("Connect failed", ex);
+                    scheduleReconnect();
+                    return null;
+                });
+    }
+
+    private void scheduleReconnect() {
+        log.warn("Reconnecting in 5 seconds");
+        CompletableFuture.delayedExecutor(5, TimeUnit.SECONDS).execute(this::connect);
+    }
 
     private static String normalize(String s){
         s = s.toLowerCase();
@@ -49,16 +62,17 @@ public class CertStreamClient {
     private static class CertStreamListener implements WebSocket.Listener {
         private final ObjectMapper mapper;
         private final StringBuilder buffer = new StringBuilder();
+        private final Runnable onDisconnect;
 
-        private CertStreamListener(ObjectMapper mapper) {
+        private CertStreamListener(ObjectMapper mapper, Runnable onDisconnect) {
             this.mapper = mapper;
+            this.onDisconnect = onDisconnect;
         }
 
         @Override
         public void onOpen(WebSocket webSocket) {
             log.info("Successfully connected to CertStream!");
             webSocket.request(1);
-            WebSocket.Listener.super.onOpen(webSocket);
         }
 
         @Override
@@ -77,13 +91,14 @@ public class CertStreamClient {
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
             log.error("A WebSocket error occurred", error);
-            WebSocket.Listener.super.onError(webSocket, error);
+            onDisconnect.run();
         }
 
         @Override
         public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
             log.info("Closed: {} {}", statusCode, reason);
-            return WebSocket.Listener.super.onClose(webSocket, statusCode, reason);
+            onDisconnect.run();
+            return null;
         }
     }
 }
