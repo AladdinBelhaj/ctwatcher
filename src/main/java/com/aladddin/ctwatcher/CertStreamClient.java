@@ -38,6 +38,14 @@ public class CertStreamClient {
                 .buildAsync(URI.create(url), new CertStreamListener(mapper))
                 .join();}
 
+    private static String normalize(String s){
+        s = s.toLowerCase();
+        if (s.startsWith("*.")){
+            return s.substring(2);
+        }
+        return s;
+    }
+
     private static class CertStreamListener implements WebSocket.Listener {
         private final ObjectMapper mapper;
         private final StringBuilder buffer = new StringBuilder();
@@ -59,7 +67,7 @@ public class CertStreamClient {
             if (last) {
                 JsonNode root = mapper.readTree(buffer.toString());
                 for (JsonNode d : root.path("data")){
-                    log.info("Domain: {}", d.toString());
+                    log.info("Domain: {}", normalize(d.asString()));
                 }
                 buffer.setLength(0);
             }
