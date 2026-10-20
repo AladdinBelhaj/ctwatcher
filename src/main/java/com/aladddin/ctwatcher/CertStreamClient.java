@@ -13,11 +13,13 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Component
 public class CertStreamClient {
@@ -25,12 +27,18 @@ public class CertStreamClient {
     private static final Logger log = LoggerFactory.getLogger(CertStreamClient.class);
 
     private final String url;
-
     private final ObjectMapper mapper;
+    private final LookalikeDetector detector;
+    private final List<String> watched;
 
-    public CertStreamClient(@Value("${certstream.url}") String url, ObjectMapper mapper) {
+    public CertStreamClient(@Value("${certstream.url}") String url,
+                            ObjectMapper mapper,
+                            LookalikeDetector detector,
+                            @Value("${watcher.domains}") List<String> watched) {
         this.url = url;
         this.mapper = mapper;
+        this.detector = detector;
+        this.watched = watched;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -38,7 +46,7 @@ public class CertStreamClient {
         log.info("Connecting to {}", url);
         HttpClient client = HttpClient.newHttpClient();
         client.newWebSocketBuilder()
-                .buildAsync(URI.create(url), new CertStreamListener(mapper, this::scheduleReconnect))
+                .buildAsync(URI.create(url), new CertStreamListener(mapper, this::scheduleReconnect, this::handleDomain))
                 .exceptionally(ex -> {
                     log.error("Connect failed", ex);
                     scheduleReconnect();
@@ -50,7 +58,13 @@ public class CertStreamClient {
         log.warn("Reconnecting in 5 seconds");
         CompletableFuture.delayedExecutor(5, TimeUnit.SECONDS).execute(this::connect);
     }
-
+    private void handleDomain(String domain) {
+        for (String w : watched) {
+            if (detector.isLookalike(domain, w)) {
+                log.warn("LOOKALIKE: {} resembles {}", domain, w);
+            }
+        }
+    }
     private static String normalize(String s){
         s = s.toLowerCase();
         if (s.startsWith("*.")){
@@ -63,10 +77,12 @@ public class CertStreamClient {
         private final ObjectMapper mapper;
         private final StringBuilder buffer = new StringBuilder();
         private final Runnable onDisconnect;
+        private final Consumer<String> onDomain;
 
-        private CertStreamListener(ObjectMapper mapper, Runnable onDisconnect) {
+        private CertStreamListener(ObjectMapper mapper, Runnable onDisconnect, Consumer<String> onDomain) {
             this.mapper = mapper;
             this.onDisconnect = onDisconnect;
+            this.onDomain = onDomain;
         }
 
         @Override
@@ -81,7 +97,7 @@ public class CertStreamClient {
             if (last) {
                 JsonNode root = mapper.readTree(buffer.toString());
                 for (JsonNode d : root.path("data")){
-                    log.info("Domain: {}", normalize(d.asString()));
+                    onDomain.accept(normalize(d.asString()));
                 }
                 buffer.setLength(0);
             }
