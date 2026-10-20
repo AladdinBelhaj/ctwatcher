@@ -1,14 +1,29 @@
 package com.aladddin.ctwatcher;
 
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+
+@Component
 public class LookalikeDetector {
 
     private static final int MAX_DISTANCE = 2;
 
     public boolean isLookalike(String candidate, String watched) {
-        if (candidate.equals(watched)) {
+        int labels = watched.split("\\.").length;
+        String tail = tail(candidate, labels);
+        if (tail == null || tail.equals(watched)) {
             return false;
         }
-        return levenshtein(candidate, watched) <= MAX_DISTANCE;
+        return levenshtein(tail, watched) <= MAX_DISTANCE;
+    }
+
+    private static String tail(String domain, int labels) {
+        String[] parts = domain.split("\\.");
+        if (parts.length < labels) {
+            return null;
+        }
+        return String.join(".", Arrays.copyOfRange(parts, parts.length - labels, parts.length));
     }
 
     private static int levenshtein(String a, String b) {

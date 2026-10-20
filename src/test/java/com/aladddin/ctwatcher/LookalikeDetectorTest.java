@@ -28,4 +28,19 @@ class LookalikeDetectorTest {
     void unrelatedDomainIsNotLookalike() {
         assertFalse(detector.isLookalike("google.com", "paypal.com"));
     }
+
+    @Test
+    void subdomainOfLookalikeIsDetected() {
+        assertTrue(detector.isLookalike("login.paypa1.com", "paypal.com"));
+    }
+
+    @Test
+    void subdomainOfRealDomainIsNotLookalike() {
+        assertFalse(detector.isLookalike("login.paypal.com", "paypal.com"));
+    }
+
+    @Test
+    void candidateWithTooFewLabelsIsNotLookalike() {
+        assertFalse(detector.isLookalike("com", "paypal.com"));
+    }
 }
