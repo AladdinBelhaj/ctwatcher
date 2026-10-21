@@ -30,15 +30,18 @@ public class CertStreamClient {
     private final ObjectMapper mapper;
     private final LookalikeDetector detector;
     private final List<String> watched;
+    private final AlertRepository repository;
 
     public CertStreamClient(@Value("${certstream.url}") String url,
                             ObjectMapper mapper,
                             LookalikeDetector detector,
-                            @Value("${watcher.domains}") List<String> watched) {
+                            @Value("${watcher.domains}") List<String> watched,
+                            AlertRepository repository) {
         this.url = url;
         this.mapper = mapper;
         this.detector = detector;
         this.watched = watched;
+        this.repository = repository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -58,13 +61,18 @@ public class CertStreamClient {
         log.warn("Reconnecting in 5 seconds");
         CompletableFuture.delayedExecutor(5, TimeUnit.SECONDS).execute(this::connect);
     }
+
     private void handleDomain(String domain) {
         for (String w : watched) {
-            if (detector.isLookalike(domain, w)) {
+            if (detector.isLookalike(domain, w)
+                    && !repository.existsByCandidateAndWatched(domain, w)) {
+                repository.save(new Alert(domain, w));
                 log.warn("LOOKALIKE: {} resembles {}", domain, w);
             }
         }
     }
+
+
     private static String normalize(String s){
         s = s.toLowerCase();
         if (s.startsWith("*.")){
