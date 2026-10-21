@@ -13,6 +13,8 @@ services:
       POSTGRES_PASSWORD: ctwatcher
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
   ingester:
     image: ct-ingester:0.1
     depends_on:
