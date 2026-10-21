@@ -16,6 +16,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
   ingester:
+    build: .
     image: ct-ingester:0.1
     depends_on:
       - postgres
