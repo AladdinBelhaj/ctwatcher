@@ -1,15 +1,12 @@
 package com.aladddin.ctwatcher;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "alerts")
+@Table(name = "alerts",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"candidate", "watched"}))
 public class Alert {
 
     @Id
