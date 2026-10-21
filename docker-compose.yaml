@@ -13,3 +13,17 @@ services:
       POSTGRES_PASSWORD: ctwatcher
     ports:
       - "5432:5432"
+  ingester:
+    image: ct-ingester:0.1
+    depends_on:
+      - postgres
+      - certstream
+    environment:
+      CERTSTREAM_URL: ws://certstream:8080/domains-only
+      WATCHER_DOMAINS: paypal.com
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ctwatcher
+      SPRING_DATASOURCE_USERNAME: ctwatcher
+      SPRING_DATASOURCE_PASSWORD: ctwatcher
+    ports:
+      - "8081:8081"
+    restart: on-failure
